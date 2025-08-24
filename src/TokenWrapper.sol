@@ -6,7 +6,6 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 /// @title TokenWrapper - Time-locked token wrapper
 /// @notice Wraps tokens that can only be unwrapped after a specific unlock time
 contract TokenWrapper is ERC20 {
-
     using SafeTransferLib for address;
 
     /// @notice The underlying token being wrapped
@@ -16,7 +15,7 @@ contract TokenWrapper is ERC20 {
 
     string private _name;
     string private _symbol;
-    uint8 private _decimals;
+    uint8 private immutable _decimals;
 
     function name() public view override returns (string memory) {
         return _name;
@@ -47,11 +46,14 @@ contract TokenWrapper is ERC20 {
         _mint(msg.sender, amount);
     }
 
-    /// @notice Unwrap tokens to receive underlying tokens (only after unlock time)
     function unwrap(uint256 amount) external {
-        if (block.timestamp < unlockTime) revert TooEarly();
-        _burn(msg.sender, amount);
-        address(underlyingToken).safeTransfer(msg.sender, amount);
+        unwrapTo(msg.sender, amount);
     }
 
+    /// @notice Unwrap tokens to receive underlying tokens (only after unlock time)
+    function unwrapTo(address recipient, uint256 amount) public {
+        if (block.timestamp < unlockTime) revert TooEarly();
+        _burn(msg.sender, amount);
+        address(underlyingToken).safeTransfer(recipient, amount);
+    }
 }

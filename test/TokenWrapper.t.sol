@@ -12,7 +12,7 @@ contract MockERC20 is ERC20 {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
-    
+
     constructor(string memory name_, string memory symbol_, uint8 decimals_) {
         _name = name_;
         _symbol = symbol_;
@@ -22,15 +22,15 @@ contract MockERC20 is ERC20 {
     function name() public view override returns (string memory) {
         return _name;
     }
-    
+
     function symbol() public view override returns (string memory) {
         return _symbol;
     }
-    
+
     function decimals() public view override returns (uint8) {
         return _decimals;
     }
-    
+
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
@@ -40,10 +40,10 @@ contract TokenWrapperTest is Test {
     TokenWrapper public wrapper;
     TokenWrapperFactory public factory;
     MockERC20 public underlying;
-    
+
     uint256 public august19Of2025 = 1755616480;
     address public user = makeAddr("user");
-    
+
     function setUp() public {
         underlying = new MockERC20("Ekubo Protocol", "EKUBO", 18);
         underlying.mint(user, 100e18);
@@ -53,7 +53,7 @@ contract TokenWrapperTest is Test {
         underlying.approve(address(wrapper), type(uint256).max);
     }
 
-    function testTokenInfo() public {
+    function testTokenInfo() public view {
         assertEq(wrapper.symbol(), "gEKUBO 25Q3");
         assertEq(wrapper.name(), "Ekubo Protocol Aug/19/2025");
         assertEq(wrapper.unlockTime(), august19Of2025);
@@ -71,12 +71,12 @@ contract TokenWrapperTest is Test {
         assertEq(underlying.balanceOf(address(wrapper)), wrapAmount, "Didn't transfer underlying");
     }
 
-    function testUnwrap(uint256 wrapAmount, uint256 unwrapAmount, uint256 time) public {
+    function testUnwrapTo(address recipient, uint256 wrapAmount, uint256 unwrapAmount, uint256 time) public {
         wrapAmount = bound(wrapAmount, 0, underlying.balanceOf(user));
-        
+
         vm.startPrank(user);
         wrapper.wrap(wrapAmount);
-        uint256 oldBalance = underlying.balanceOf(user);
+        uint256 oldBalance = underlying.balanceOf(recipient);
 
         vm.warp(time);
         if (time < august19Of2025 || unwrapAmount > wrapAmount) {
@@ -84,9 +84,8 @@ contract TokenWrapperTest is Test {
             wrapper.unwrap(unwrapAmount);
             return;
         }
-        wrapper.unwrap(unwrapAmount);
+        wrapper.unwrapTo(recipient, unwrapAmount);
         assertEq(wrapper.balanceOf(user), wrapAmount - unwrapAmount, "Didn't burn wrapper");
-        assertEq(underlying.balanceOf(user), oldBalance + unwrapAmount, "Didn't transfer underlying");
+        assertEq(underlying.balanceOf(recipient), oldBalance + unwrapAmount, "Didn't transfer underlying");
     }
-
 }
