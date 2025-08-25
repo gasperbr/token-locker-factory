@@ -53,6 +53,11 @@ contract TokenWrapperTest is Test {
         underlying.approve(address(wrapper), type(uint256).max);
     }
 
+    function testDeployWrapperGas() public {
+        factory.deployWrapper(underlying, "g", august19Of2025);
+        vm.snapshotGasLastCall("deployWrapper");
+    }
+
     function testTokenInfo() public view {
         assertEq(wrapper.symbol(), "gEKUBO 25Q3");
         assertEq(wrapper.name(), "Ekubo Protocol Aug/19/2025");
