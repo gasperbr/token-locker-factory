@@ -2,13 +2,12 @@
 pragma solidity ^0.8.4;
 
 import {Test} from "forge-std/Test.sol";
-import {console} from "forge-std/console.sol";
 import {TokenWrapper} from "../src/TokenWrapper.sol";
 import {TokenWrapperFactory} from "../src/TokenWrapperFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import {DateTimeLib} from "solady/utils/DateTimeLib.sol";
+import {LibString} from "solady/utils/LibString.sol";
 
-contract MockERC20 is ERC20 {
+contract TestToken is ERC20 {
     string private _name;
     string private _symbol;
     uint8 private _decimals;
@@ -37,54 +36,62 @@ contract MockERC20 is ERC20 {
 }
 
 contract TokenWrapperTest is Test {
-    TokenWrapper public wrapper;
-    TokenWrapperFactory public factory;
-    MockERC20 public underlying;
+    using LibString for *;
 
-    uint256 public august19Of2025 = 1755616480;
-    address public user = makeAddr("user");
+    TokenWrapperFactory factory;
+    TestToken underlying;
+
+    address user = makeAddr("user");
 
     function setUp() public {
-        underlying = new MockERC20("Ekubo Protocol", "EKUBO", 18);
+        underlying = new TestToken("Ekubo Protocol", "EKUBO", 18);
         underlying.mint(user, 100e18);
         factory = new TokenWrapperFactory();
-        wrapper = factory.deployWrapper(underlying, "g", august19Of2025);
-        vm.prank(user);
-        underlying.approve(address(wrapper), type(uint256).max);
     }
 
     function testDeployWrapperGas() public {
-        factory.deployWrapper(underlying, "g", august19Of2025);
+        factory.deployWrapper(underlying, "g", 1756140269);
         vm.snapshotGasLastCall("deployWrapper");
     }
 
-    function testTokenInfo() public view {
-        assertEq(wrapper.symbol(), "gEKUBO 25Q3");
-        assertEq(wrapper.name(), "Ekubo Protocol Aug/19/2025");
-        assertEq(wrapper.unlockTime(), august19Of2025);
+    function testTokenInfo(uint256 time, uint256 unlockTime) public {
+        time = bound(time, 0, type(uint256).max - type(uint32).max);
+        vm.warp(time);
+        unlockTime = bound(unlockTime, vm.getBlockTimestamp() + 1, vm.getBlockTimestamp() + type(uint32).max);
+
+        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", unlockTime);
+
+        assertTrue(wrapper.symbol().startsWith("gEKUBO "));
+        assertTrue(wrapper.name().startsWith("Ekubo Protocol "));
+        assertEq(wrapper.unlockTime(), unlockTime);
     }
 
-    function testWrap(uint256 wrapAmount) public {
+    function testWrap(uint256 time, uint256 unlockTime, uint256 wrapAmount) public {
+        vm.warp(time);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", unlockTime);
         vm.startPrank(user);
+        underlying.approve(address(wrapper), wrapAmount);
         if (wrapAmount > underlying.balanceOf(user)) {
             vm.expectRevert();
             wrapper.wrap(wrapAmount);
-            return;
+        } else {
+            wrapper.wrap(wrapAmount);
+            assertEq(wrapper.balanceOf(user), wrapAmount, "Didn't mint wrapper");
+            assertEq(underlying.balanceOf(address(wrapper)), wrapAmount, "Didn't transfer underlying");
         }
-        wrapper.wrap(wrapAmount);
-        assertEq(wrapper.balanceOf(user), wrapAmount, "Didn't mint wrapper");
-        assertEq(underlying.balanceOf(address(wrapper)), wrapAmount, "Didn't transfer underlying");
     }
 
     function testUnwrapTo(address recipient, uint256 wrapAmount, uint256 unwrapAmount, uint256 time) public {
+        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 1755616480);
         wrapAmount = bound(wrapAmount, 0, underlying.balanceOf(user));
 
         vm.startPrank(user);
+        underlying.approve(address(wrapper), wrapAmount);
         wrapper.wrap(wrapAmount);
         uint256 oldBalance = underlying.balanceOf(recipient);
 
         vm.warp(time);
-        if (time < august19Of2025 || unwrapAmount > wrapAmount) {
+        if (time < wrapper.unlockTime() || unwrapAmount > wrapAmount) {
             vm.expectRevert();
             wrapper.unwrap(unwrapAmount);
             return;

@@ -2,16 +2,12 @@ pragma solidity ^0.8.4;
 
 import {TokenWrapper} from "./TokenWrapper.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import {DateTimeLib} from "solady/utils/DateTimeLib.sol";
-import {LibString} from "solady/utils/LibString.sol";
+import {toDescriptors} from "./TimeDescriptor.sol";
 
 /// @title TokenWrapperFactory - Factory for creating time-locked token wrappers
 /// @notice Creates TokenWrapper contracts with formatted names and symbols based on unlock dates
 contract TokenWrapperFactory {
-    using DateTimeLib for uint256;
-    using LibString for uint256;
-
-    event TokenWrapperDeployed(ERC20 underlyingToken, TokenWrapper tokenWrapper, uint256 unlockTime);
+    event TokenWrapperDeployed(ERC20 underlyingToken, uint256 unlockTime, TokenWrapper tokenWrapper);
 
     /// @notice Deploy a new TokenWrapper with auto-generated name and symbol
     /// @param underlyingToken The token to be wrapped
@@ -22,20 +18,17 @@ contract TokenWrapperFactory {
         external
         returns (TokenWrapper tokenWrapper)
     {
-        (uint256 year, uint256 month, uint256 day) = unlockTime.timestampToDate();
-        string memory yearStr = year.toString();
-        string memory shortenedYearStr = (year % 100).toString();
-        string memory monthStr = _getMonthAbbreviation(month);
-        string memory quarterStr = string.concat("Q", (1 + (month - 1) / 3).toString());
-        string memory dayStr = day.toString();
+        (string memory quarterLabel, string memory dateLabel) = toDescriptors(unlockTime);
 
         // Generate name and symbol with date formatting
-        string memory tokenSymbol = string.concat(prefix, underlyingToken.symbol(), " ", shortenedYearStr, quarterStr);
-        string memory tokenName = string.concat(underlyingToken.name(), " ", monthStr, "/", dayStr, "/", yearStr);
+        string memory tokenSymbol = string.concat(prefix, underlyingToken.symbol(), " ", quarterLabel);
+        string memory tokenName = string.concat(underlyingToken.name(), " ", dateLabel);
 
-        tokenWrapper = new TokenWrapper(underlyingToken, tokenName, tokenSymbol, unlockTime);
+        bytes32 salt = keccak256(abi.encode(underlyingToken, unlockTime));
 
-        emit TokenWrapperDeployed(underlyingToken, tokenWrapper, unlockTime);
+        tokenWrapper = new TokenWrapper{salt: salt}(underlyingToken, tokenName, tokenSymbol, unlockTime);
+
+        emit TokenWrapperDeployed(underlyingToken, unlockTime, tokenWrapper);
     }
 
     // Returns the 3-letter month abbreviation for a given month number (1-12)
