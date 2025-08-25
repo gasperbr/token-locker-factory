@@ -4,8 +4,10 @@ out = "out"
 libs = ["lib"]
 solc = "0.8.28"
 
-remappings = [
-    "solady/=lib/solady/src/"
-]
+optimizer = true
+optimizer_runs = 999999
+via_ir = true
+
+remappings = ["solady/=lib/solady/src/", "forge-std/=lib/forge-std/src/"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

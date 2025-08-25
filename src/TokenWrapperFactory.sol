@@ -11,25 +11,31 @@ contract TokenWrapperFactory {
     using DateTimeLib for uint256;
     using LibString for uint256;
 
+    event TokenWrapperDeployed(ERC20 underlyingToken, TokenWrapper tokenWrapper, uint256 unlockTime);
+
     /// @notice Deploy a new TokenWrapper with auto-generated name and symbol
     /// @param underlyingToken The token to be wrapped
     /// @param prefix Prefix for the wrapper token symbol
     /// @param unlockTime Timestamp when tokens can be unwrapped
-    /// @return The deployed TokenWrapper contract
-    function deployWrapper(ERC20 underlyingToken, string memory prefix, uint256 unlockTime) external returns (TokenWrapper) {
-
+    /// @return tokenWrapper The deployed TokenWrapper contract
+    function deployWrapper(ERC20 underlyingToken, string memory prefix, uint256 unlockTime)
+        external
+        returns (TokenWrapper tokenWrapper)
+    {
         (uint256 year, uint256 month, uint256 day) = unlockTime.timestampToDate();
         string memory yearStr = year.toString();
         string memory shortenedYearStr = (year % 100).toString();
         string memory monthStr = _getMonthAbbreviation(month);
         string memory quarterStr = string.concat("Q", (1 + (month - 1) / 3).toString());
         string memory dayStr = day.toString();
-        
+
         // Generate name and symbol with date formatting
         string memory tokenSymbol = string.concat(prefix, underlyingToken.symbol(), " ", shortenedYearStr, quarterStr);
         string memory tokenName = string.concat(underlyingToken.name(), " ", monthStr, "/", dayStr, "/", yearStr);
-        
-        return new TokenWrapper(underlyingToken, tokenName, tokenSymbol, unlockTime);
+
+        tokenWrapper = new TokenWrapper(underlyingToken, tokenName, tokenSymbol, unlockTime);
+
+        emit TokenWrapperDeployed(underlyingToken, tokenWrapper, unlockTime);
     }
 
     // Returns the 3-letter month abbreviation for a given month number (1-12)
