@@ -81,6 +81,17 @@ contract TokenWrapperTest is Test {
         }
     }
 
+    function testWrapGas() public {
+        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 0);
+        vm.startPrank(user);
+        underlying.approve(address(wrapper), 1);
+        vm.cool(address(wrapper));
+        vm.cool(address(underlying));
+        vm.cool(address(user));
+        wrapper.wrap(1);
+        vm.snapshotGasLastCall("wrap");
+    }
+
     function testUnwrapTo(address recipient, uint256 wrapAmount, uint256 unwrapAmount, uint256 time) public {
         TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 1755616480);
         wrapAmount = bound(wrapAmount, 0, underlying.balanceOf(user));
@@ -99,5 +110,19 @@ contract TokenWrapperTest is Test {
         wrapper.unwrapTo(recipient, unwrapAmount);
         assertEq(wrapper.balanceOf(user), wrapAmount - unwrapAmount, "Didn't burn wrapper");
         assertEq(underlying.balanceOf(recipient), oldBalance + unwrapAmount, "Didn't transfer underlying");
+    }
+
+    function testUnwrapGas() public {
+        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 0);
+
+        vm.startPrank(user);
+        underlying.approve(address(wrapper), 1);
+        wrapper.wrap(1);
+
+        vm.cool(address(wrapper));
+        vm.cool(address(underlying));
+        vm.cool(address(user));
+        wrapper.unwrapTo(user, 1);
+        vm.snapshotGasLastCall("unwrap");
     }
 }
