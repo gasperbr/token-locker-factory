@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {toDescriptors} from "./TimeDescriptor.sol";
+import {toDate, toQuarter} from "./TimeDescriptor.sol";
 
 /// @title TokenWrapper - Time-locked token wrapper
 /// @notice Wraps tokens that can only be unwrapped after a specific unlock time
@@ -34,14 +34,12 @@ contract TokenWrapper is ERC20 {
     function name() public view override returns (string memory) {
         (ERC20 underlying, uint256 unlock) = args();
 
-        (, string memory dateLabel) = toDescriptors(unlock);
-        return string.concat(underlying.name(), " ", dateLabel);
+        return string.concat(underlying.name(), " ", toDate(unlock));
     }
 
     function symbol() public view override returns (string memory) {
         (ERC20 underlying, uint256 unlock) = args();
-        (string memory quarterLabel,) = toDescriptors(unlock);
-        return string.concat("g", underlying.symbol(), " ", quarterLabel);
+        return string.concat("g", underlying.symbol(), "-", toQuarter(unlock));
     }
 
     function decimals() public view override returns (uint8) {

@@ -5,22 +5,18 @@ import {Test} from "forge-std/Test.sol";
 import {TokenWrapper} from "../src/TokenWrapper.sol";
 import {TokenWrapperFactory} from "../src/TokenWrapperFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import {LibString} from "solady/utils/LibString.sol";
 
 contract ForkTest is Test {
-    using LibString for *;
-
     ERC20 ekubo = ERC20(0x04C46E830Bb56ce22735d5d8Fc9CB90309317d0f);
     TokenWrapper wrapper;
 
-    uint256 unlockTime;
+    uint256 public constant blockNumber = 23226976;
+    uint256 public constant unlockTime = 1772514000; // 2026-03-03T05:00:00.000Z
 
     address user = makeAddr("user");
 
     function setUp() public {
-        vm.createSelectFork("https://eth.llamarpc.com");
-
-        unlockTime = vm.getBlockTimestamp() + 86_400; // one day from now
+        vm.createSelectFork("https://eth.llamarpc.com", blockNumber);
 
         // Create the wrapper
         TokenWrapperFactory factory = new TokenWrapperFactory();
@@ -35,8 +31,8 @@ contract ForkTest is Test {
     }
 
     function testWrapperInfo() public view {
-        assertTrue(wrapper.symbol().startsWith("gEKUBO "));
-        assertTrue(wrapper.name().startsWith("Ekubo Protocol "));
+        assertEq(wrapper.symbol(), "gEKUBO-26Q1");
+        assertEq(wrapper.name(), "Ekubo Protocol Mar/3/2026");
         assertEq(wrapper.unlockTime(), unlockTime);
     }
 

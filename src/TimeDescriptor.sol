@@ -22,13 +22,20 @@ function getMonthAbbreviation(uint256 month) pure returns (string memory) {
     revert UnrecognizedMonth();
 }
 
-function toDescriptors(uint256 unlockTime) pure returns (string memory quarterLabel, string memory dateLabel) {
+function toQuarter(uint256 unlockTime) pure returns (string memory quarterLabel) {
+    (uint256 year, uint256 month,) = DateTimeLib.timestampToDate(unlockTime);
+    string memory shortenedYearStr = LibString.toString(year % 100);
+
+    unchecked {
+        quarterLabel = string.concat(shortenedYearStr, "Q", LibString.toString(1 + (month - 1) / 3));
+    }
+}
+
+function toDate(uint256 unlockTime) pure returns (string memory dateLabel) {
     (uint256 year, uint256 month, uint256 day) = DateTimeLib.timestampToDate(unlockTime);
     string memory yearStr = LibString.toString(year);
-    string memory shortenedYearStr = LibString.toString(year % 100);
     string memory monthStr = getMonthAbbreviation(month);
     string memory dayStr = LibString.toString(day);
 
-    quarterLabel = string.concat(shortenedYearStr, "Q", LibString.toString(1 + (month - 1) / 3));
     dateLabel = string.concat(monthStr, "/", dayStr, "/", yearStr);
 }

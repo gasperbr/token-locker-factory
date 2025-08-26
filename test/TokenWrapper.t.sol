@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {TokenWrapper} from "../src/TokenWrapper.sol";
 import {TokenWrapperFactory} from "../src/TokenWrapperFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import {LibString} from "solady/utils/LibString.sol";
+import {toDate, toQuarter} from "../src/TimeDescriptor.sol";
 
 contract TestToken is ERC20 {
     string private _name;
@@ -36,8 +36,6 @@ contract TestToken is ERC20 {
 }
 
 contract TokenWrapperTest is Test {
-    using LibString for *;
-
     TokenWrapperFactory factory;
     TestToken underlying;
 
@@ -61,8 +59,8 @@ contract TokenWrapperTest is Test {
 
         TokenWrapper wrapper = factory.deployWrapper(underlying, unlockTime);
 
-        assertTrue(wrapper.symbol().startsWith("gEKUBO "));
-        assertTrue(wrapper.name().startsWith("Ekubo Protocol "));
+        assertEq(wrapper.symbol(), string.concat("gEKUBO-", toQuarter(unlockTime)));
+        assertEq(wrapper.name(), string.concat("Ekubo Protocol ", toDate(unlockTime)));
         assertEq(wrapper.unlockTime(), unlockTime);
     }
 
