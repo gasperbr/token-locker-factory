@@ -28,6 +28,15 @@ contract TimeDescriptorTest is Test {
 
         quarterLabel = toQuarter(1775016000);
         assertEq(quarterLabel, "26Q2");
+
+        quarterLabel = toQuarter(4102506000);
+        assertEq(quarterLabel, "00Q1");
+
+        quarterLabel = toQuarter(4110278400);
+        assertEq(quarterLabel, "00Q2");
+
+        quarterLabel = toQuarter(4394275200);
+        assertEq(quarterLabel, "09Q2");
     }
 
     function testNeverRevertsFollowsFormat(uint256 unlockTime) public pure {
