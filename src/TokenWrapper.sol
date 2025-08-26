@@ -2,8 +2,8 @@
 pragma solidity ^0.8.4;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
-
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 import {toDate, toQuarter} from "./TimeDescriptor.sol";
 
 /// @title TokenWrapper - Time-locked token wrapper
