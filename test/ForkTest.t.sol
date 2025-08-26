@@ -24,7 +24,7 @@ contract ForkTest is Test {
 
         // Create the wrapper
         TokenWrapperFactory factory = new TokenWrapperFactory();
-        wrapper = factory.deployWrapper(ekubo, "g", unlockTime);
+        wrapper = factory.deployWrapper(ekubo, unlockTime);
 
         // Give user some EKUBO tokens for testing
         deal(address(ekubo), user, 100e18);

@@ -1,48 +1,61 @@
 pragma solidity ^0.8.4;
 
 import {ERC20} from "solady/tokens/ERC20.sol";
+
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {toDescriptors} from "./TimeDescriptor.sol";
 
 /// @title TokenWrapper - Time-locked token wrapper
 /// @notice Wraps tokens that can only be unwrapped after a specific unlock time
 contract TokenWrapper is ERC20 {
     using SafeTransferLib for address;
 
-    /// @notice The underlying token being wrapped
-    ERC20 public immutable underlyingToken;
-    /// @notice Timestamp when tokens can be unwrapped
-    uint256 public immutable unlockTime;
+    /// @dev Returns the immutable arguments
+    function args() private view returns (ERC20 token, uint256 unlock) {
+        assembly ("memory-safe") {
+            extcodecopy(address(), 0, 0x2d, 0x40)
+            token := mload(0x00)
+            unlock := mload(0x20)
+        }
+    }
 
-    string private _name;
-    string private _symbol;
-    uint8 private immutable _decimals;
+    /// @notice The underlying token being wrapped
+    function underlyingToken() external view returns (ERC20) {
+        (ERC20 token,) = args();
+        return token;
+    }
+
+    /// @notice Timestamp when tokens can be unwrapped
+    function unlockTime() external view returns (uint256) {
+        (, uint256 unlock) = args();
+        return unlock;
+    }
 
     function name() public view override returns (string memory) {
-        return _name;
+        (ERC20 underlying, uint256 unlock) = args();
+
+        (, string memory dateLabel) = toDescriptors(unlock);
+        return string.concat(underlying.name(), " ", dateLabel);
     }
 
     function symbol() public view override returns (string memory) {
-        return _symbol;
+        (ERC20 underlying, uint256 unlock) = args();
+        (string memory quarterLabel,) = toDescriptors(unlock);
+        return string.concat("g", underlying.symbol(), " ", quarterLabel);
     }
 
     function decimals() public view override returns (uint8) {
-        return _decimals;
+        (ERC20 underlying,) = args();
+        return underlying.decimals();
     }
 
     /// @notice Thrown when trying to unwrap before unlock time
     error TooEarly();
 
-    constructor(ERC20 _underlyingToken, string memory tokenName, string memory tokenSymbol, uint256 _unlockTime) {
-        underlyingToken = _underlyingToken;
-        unlockTime = _unlockTime;
-        _name = tokenName;
-        _symbol = tokenSymbol;
-        _decimals = underlyingToken.decimals();
-    }
-
     /// @notice Wrap underlying tokens to receive wrapper tokens
     function wrap(uint256 amount) external {
-        address(underlyingToken).safeTransferFrom(msg.sender, address(this), amount);
+        (ERC20 underlying,) = args();
+        address(underlying).safeTransferFrom(msg.sender, address(this), amount);
         _mint(msg.sender, amount);
     }
 
@@ -52,8 +65,9 @@ contract TokenWrapper is ERC20 {
 
     /// @notice Unwrap tokens to receive underlying tokens (only after unlock time)
     function unwrapTo(address recipient, uint256 amount) public {
-        if (block.timestamp < unlockTime) revert TooEarly();
+        (ERC20 underlying, uint256 unlock) = args();
+        if (block.timestamp < unlock) revert TooEarly();
         _burn(msg.sender, amount);
-        address(underlyingToken).safeTransfer(recipient, amount);
+        address(underlying).safeTransfer(recipient, amount);
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import {Script, console} from "forge-std/Script.sol";
+import {Script} from "forge-std/Script.sol";
 import {TokenWrapperFactory} from "../src/TokenWrapperFactory.sol";
 import {TokenWrapper} from "../src/TokenWrapper.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
@@ -21,15 +21,9 @@ contract DeployScript is Script {
 
         // Deploy the factory
         factory = new TokenWrapperFactory();
-        console.log("TokenWrapperFactory deployed at:", address(factory));
 
         // Create gEKUBO Mar31 wrapper
-        gEKUBOWrapper = factory.deployWrapper(ERC20(EKUBO_TOKEN), "g", MAR_31_2026);
-
-        console.log("gEKUBO 26Q1 wrapper deployed at:", address(gEKUBOWrapper));
-        console.log("Wrapper name:", gEKUBOWrapper.name());
-        console.log("Wrapper symbol:", gEKUBOWrapper.symbol());
-        console.log("Unlock time:", gEKUBOWrapper.unlockTime());
+        gEKUBOWrapper = factory.deployWrapper(ERC20(EKUBO_TOKEN), MAR_31_2026);
 
         vm.stopBroadcast();
     }
