@@ -58,14 +58,23 @@ contract TokenWrapper is ERC20 {
     }
 
     function unwrap(uint256 amount) external {
-        unwrapTo(msg.sender, amount);
+        unwrapFrom(msg.sender, msg.sender, amount);
+    }
+
+    function unwrapTo(address recipient, uint256 amount) external {
+        unwrapFrom(msg.sender, recipient, amount);
     }
 
     /// @notice Unwrap tokens to receive underlying tokens (only after unlock time)
-    function unwrapTo(address recipient, uint256 amount) public {
+    function unwrapFrom(address owner, address recipient, uint256 amount) public {
         (ERC20 underlying, uint256 unlock) = args();
         if (block.timestamp < unlock) revert TooEarly();
-        _burn(msg.sender, amount);
+
+        if (owner != msg.sender) {
+            _spendAllowance(owner, msg.sender, amount);
+        }
+
+        _burn(owner, amount);
         address(underlying).safeTransfer(recipient, amount);
     }
 }
