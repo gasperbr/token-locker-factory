@@ -5,7 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {TokenWrapper} from "../src/TokenWrapper.sol";
 import {TokenWrapperFactory} from "../src/TokenWrapperFactory.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
-import {LibString} from "solady/utils/LibString.sol";
+import {toDate, toQuarter} from "../src/TimeDescriptor.sol";
 
 contract TestToken is ERC20 {
     string private _name;
@@ -36,8 +36,6 @@ contract TestToken is ERC20 {
 }
 
 contract TokenWrapperTest is Test {
-    using LibString for *;
-
     TokenWrapperFactory factory;
     TestToken underlying;
 
@@ -50,7 +48,7 @@ contract TokenWrapperTest is Test {
     }
 
     function testDeployWrapperGas() public {
-        factory.deployWrapper(underlying, "g", 1756140269);
+        factory.deployWrapper(underlying, 1756140269);
         vm.snapshotGasLastCall("deployWrapper");
     }
 
@@ -59,16 +57,16 @@ contract TokenWrapperTest is Test {
         vm.warp(time);
         unlockTime = bound(unlockTime, vm.getBlockTimestamp() + 1, vm.getBlockTimestamp() + type(uint32).max);
 
-        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", unlockTime);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, unlockTime);
 
-        assertTrue(wrapper.symbol().startsWith("gEKUBO "));
-        assertTrue(wrapper.name().startsWith("Ekubo Protocol "));
+        assertEq(wrapper.symbol(), string.concat("gEKUBO-", toQuarter(unlockTime)));
+        assertEq(wrapper.name(), string.concat("Ekubo Protocol ", toDate(unlockTime)));
         assertEq(wrapper.unlockTime(), unlockTime);
     }
 
     function testWrap(uint256 time, uint256 unlockTime, uint256 wrapAmount) public {
         vm.warp(time);
-        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", unlockTime);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, unlockTime);
         vm.startPrank(user);
         underlying.approve(address(wrapper), wrapAmount);
         if (wrapAmount > underlying.balanceOf(user)) {
@@ -82,9 +80,10 @@ contract TokenWrapperTest is Test {
     }
 
     function testWrapGas() public {
-        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 0);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, 0);
         vm.startPrank(user);
         underlying.approve(address(wrapper), 1);
+        vm.cool(address(factory.implementation()));
         vm.cool(address(wrapper));
         vm.cool(address(underlying));
         vm.cool(address(user));
@@ -93,7 +92,7 @@ contract TokenWrapperTest is Test {
     }
 
     function testUnwrapTo(address recipient, uint256 wrapAmount, uint256 unwrapAmount, uint256 time) public {
-        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 1755616480);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, 1755616480);
         wrapAmount = bound(wrapAmount, 0, underlying.balanceOf(user));
 
         vm.startPrank(user);
@@ -113,12 +112,13 @@ contract TokenWrapperTest is Test {
     }
 
     function testUnwrapGas() public {
-        TokenWrapper wrapper = factory.deployWrapper(underlying, "g", 0);
+        TokenWrapper wrapper = factory.deployWrapper(underlying, 0);
 
         vm.startPrank(user);
         underlying.approve(address(wrapper), 1);
         wrapper.wrap(1);
 
+        vm.cool(address(factory.implementation()));
         vm.cool(address(wrapper));
         vm.cool(address(underlying));
         vm.cool(address(user));
